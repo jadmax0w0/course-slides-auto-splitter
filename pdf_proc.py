@@ -31,7 +31,8 @@ class PdfProcessor:
     
     @property
     def is_pre_split_done(self):
-        return utils.has_files_with_prefix(PDF_TEMP_DIR, self.pdf_name)
+        # return utils.has_files_with_prefix(PDF_TEMP_DIR, self.pdf_name)
+        return self.pdf_split_paths is not None and self.pdf_split_ranges is not None and len(self.pdf_split_paths) == len(self.pdf_split_ranges)
     
     def pre_split(self, max_pages_per_split: int = 1):
         if self.is_pre_split_done:

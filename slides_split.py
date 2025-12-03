@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 import sys; sys.path.append(".")
 from pdf_proc import PdfProcessor
 from page_sim import LLMPageSimilarity
@@ -28,7 +30,7 @@ def main(pdf_path: str, theme_desc: str):
 
     page_theme_categorized = [[0]]
 
-    for pp in range(1, len(page_texts)):
+    for pp in tqdm(range(1, len(page_texts)), desc="Checking page", total=len(page_texts) - 1):
         ptext0, ptext1 = page_texts[pp - 1], page_texts[pp]
         pimgs0, pimgs1 = page_images[pp - 1], page_images[pp]
         judge = page_sim.check_sim(theme_desc, ptext0, pimgs0, ptext1, pimgs1, use_ocr=True)
@@ -41,3 +43,15 @@ def main(pdf_path: str, theme_desc: str):
     import pdb; pdb.set_trace()
     
     pdf_processor.finalize()
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-f", "--file", type=str, required=True)
+    parser.add_argument("-d", "--theme-desc", type=str, required=True)
+
+    args = parser.parse_args()
+
+    main(args.file, args.theme_desc)
