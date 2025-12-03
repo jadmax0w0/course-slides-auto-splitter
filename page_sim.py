@@ -5,7 +5,7 @@ from paddleocr import PaddleOCR
 
 
 class PageSimilarityBase(ABC):
-    def check_sim(self, theme_desc: str, text1: str, images1: list[str], text2: str, images2: list[str]) -> bool:
+    def check_sim(self, theme_desc: str, text1: str, images1: list[str], text2: str, images2: list[str], **kwargs) -> bool:
         raise NotImplementedError()
 
 
@@ -62,15 +62,40 @@ Conclusion: [0 或 1]
 根据 System Prompt 中的标准进行分析并给出结论。
 """
 
-    def check_sim(self, theme_desc, text1, images1, text2, images2):
-        images1_text = []
-        images2_text = []
-
+    def ocr_image(self, img_path: str):
         try:
-            ocr = PaddleOCR()
+            itexts = []
+            ocr = PaddleOCR(use_doc_orientation_classify=False, use_doc_unwarping=False, use_textline_orientation=False)
+            res = ocr.predict(img_path, return_word_box=False)
+            for r in res:
+                itexts.extend(r['rec_texts'])
+            return "\n".join(itexts)
+        
+        except Exception as e:
+            print(f"Exception when ocr: \n{e}")
+            return None
+
+    def check_sim(self, theme_desc, text1, images1, text2, images2, use_ocr = True) -> str:
+        if use_ocr:
+            images1_text = []
+            images2_text = []
+
             for img_path in images1:
-                ocr.predict(img_path, return_word_box=False)
+                img_text = self.ocr_image(img_path)
+                if isinstance(img_text, str):
+                    images1_text.append(img_text)
+            for img_path in images2:
+                img_text = self.ocr_image(img_path)
+                if isinstance(img_text, str):
+                    images2_text.append(img_text)
             
+            if images1_text:
+                text1 += "\n\n" + "\n\n".join(images1_text)
+            if images2_text:
+                text2 += "\n\n" + "\n\n".join(images2_text)
+        elif images1 is not None or images2 is not None:
+            print("Warning: Using images but not enabling OCR, omitting images")
+        
         user_prompt = self.user_prompt
         user_prompt = user_prompt.replace("{{main_topic}}", theme_desc).replace("{{slide_text_a}}", text1).replace("{{slide_text_b}}", text2)
         return chat(
@@ -88,7 +113,7 @@ Conclusion: [0 或 1]
             options={"seed": 1234},
         ).message.content
     
-    def extract_label(llm_output: str):
+    def extract_label(self, llm_output: str):
         import re
         # Conclusion:  -> 匹配固定的文字
         # \s* -> 匹配任意数量的空白字符（空格、换行、Tab等）

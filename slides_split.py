@@ -12,7 +12,7 @@ from page_sim import LLMPageSimilarity
 """
 
 
-def main(pdf_path: str):
+def main(pdf_path: str, theme_desc: str):
     pdf_processor = PdfProcessor(pdf_path)
     pdf_processor.pre_split(max_pages_per_split=1)
 
@@ -24,8 +24,20 @@ def main(pdf_path: str):
         page_texts.append(text)
         page_images.append(image_paths)
     
-    page_theme_categorized = []
+    page_sim = LLMPageSimilarity()
 
-    for 
+    page_theme_categorized = [[0]]
+
+    for pp in range(1, len(page_texts)):
+        ptext0, ptext1 = page_texts[pp - 1], page_texts[pp]
+        pimgs0, pimgs1 = page_images[pp - 1], page_images[pp]
+        judge = page_sim.check_sim(theme_desc, ptext0, pimgs0, ptext1, pimgs1, use_ocr=True)
+        result = page_sim.extract_label(judge)
+        if result == 1:
+            page_theme_categorized[-1].append(pp)
+        else:
+            page_theme_categorized.append([pp])
+    
+    import pdb; pdb.set_trace()
     
     pdf_processor.finalize()
